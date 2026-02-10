@@ -1,7 +1,7 @@
 import '@inertiajs/svelte';
 
 export interface Auth {
-    user: User;
+    user: User | null;
 }
 
 export interface BreadcrumbItem {
@@ -26,10 +26,12 @@ export type PageProps<T extends Record<string, unknown> = Record<string, unknown
 export interface User {
     id: number;
     name: string;
-    email: string;
-    avatar?: string;
+    email: string | null;
+    avatar?: string | null;
+    discord_id?: string;
+    discord_username?: string | null;
     email_verified_at: string | null;
-    two_factor_confirmed_at: string | null;
+    two_factor_confirmed_at?: string | null;
     created_at: string;
     updated_at: string;
 }
