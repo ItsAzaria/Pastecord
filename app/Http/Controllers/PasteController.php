@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Paste;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+
+class PasteController extends Controller
+{
+    public function show(string $key)
+    {
+        $paste = Paste::where('key', $key)->firstOrFail();
+
+        return Inertia::render('Paste', [
+            'paste' => [
+                'key' => $paste->key,
+                'content' => $paste->content,
+                'encrypted' => $paste->encrypted,
+                'password_protected' => $paste->password_protected,
+                'init_vector' => $paste->init_vector,
+                'salt' => $paste->salt,
+                'language' => $paste->language,
+                'burn_after_read' => $paste->burn_after_read,
+                'expires_at' => $paste->expires_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'content' => ['required', 'string'],
+            'encrypted' => ['sometimes', 'boolean'],
+            'password_protected' => ['sometimes', 'boolean'],
+            'init_vector' => ['nullable', 'string', 'max:128', Rule::requiredIf($request->boolean('encrypted'))],
+            'salt' => ['nullable', 'string', 'max:128', Rule::requiredIf($request->boolean('password_protected'))],
+            'language' => ['nullable', 'string', 'max:32'],
+            'burn_after_read' => ['sometimes', 'boolean'],
+            'expires_in_seconds' => ['nullable', 'integer', 'min:0', 'max:31536000'],
+        ]);
+
+        $expiresIn = (int) ($validated['expires_in_seconds'] ?? 0);
+        $expiresAt = $expiresIn > 0 ? now()->addSeconds($expiresIn) : null;
+
+        do {
+            $key = Str::random(32);
+        } while (Paste::where('key', $key)->exists());
+
+        $paste = Paste::create([
+            'key' => $key,
+            'content' => $validated['content'],
+            'encrypted' => (bool) ($validated['encrypted'] ?? false),
+            'password_protected' => (bool) ($validated['password_protected'] ?? false),
+            'init_vector' => $validated['init_vector'] ?? null,
+            'salt' => $validated['salt'] ?? null,
+            'language' => $validated['language'] ?? 'plaintext',
+            'discord_id' => optional($request->user())->discord_id,
+            'expires_at' => $expiresAt,
+            'burn_after_read' => (bool) ($validated['burn_after_read'] ?? false),
+            'read_count' => 0,
+            'content_hash' => hash('sha256', $validated['content']),
+        ]);
+
+        return response()->json([
+            'key' => $paste->key,
+        ], 201);
+    }
+}
