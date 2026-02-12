@@ -30,7 +30,7 @@
         expiresInMinutes: string | number;
     };
 
-    const DRAFT_STORAGE_KEY = 'laracord:draft';
+    const DRAFT_STORAGE_KEY = 'pastecord:draft';
 
     const languageOptions = highlightLanguages;
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Paste;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -88,5 +89,98 @@ class PasteController extends Controller
         return response()->json([
             'deleted' => true,
         ]);
+    }
+
+    public function storeDocumentApi(Request $request)
+    {
+        $discordId = $request->header('X-Discord-Id');
+
+        if ($discordId !== null) {
+            $validator = Validator::make(
+                ['discord_id' => $discordId],
+                ['discord_id' => ['string', 'max:32', 'regex:/^\d+$/']]
+            );
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+        }
+
+        $content = $request->input('content');
+        if (!is_string($content) || trim($content) === '') {
+            $content = $request->getContent();
+        }
+
+        if (!is_string($content) || trim($content) === '') {
+            return response()->json([
+                'message' => 'Content is required.',
+                'errors' => ['content' => ['Content is required.']],
+            ], 422);
+        }
+
+        $language = 'auto';
+
+        do {
+            $key = Str::random(32);
+        } while (Paste::where('key', $key)->exists());
+
+        $paste = Paste::create([
+            'key' => $key,
+            'content' => $content,
+            'encrypted' => false,
+            'password_protected' => false,
+            'init_vector' => null,
+            'salt' => null,
+            'language' => $language,
+            'discord_id' => $discordId,
+            'expires_at' => null,
+            'burn_after_read' => false,
+            'read_count' => 0,
+            'content_hash' => hash('sha256', $content),
+        ]);
+
+        return response()->json([
+            'key' => $paste->key,
+        ], 200);
+    }
+
+    public function showDocumentApi(string $key)
+    {
+        $paste = Paste::where('key', $key)->first();
+
+        if (!$paste) {
+            return response()->json([
+                'message' => 'Not found.',
+            ], 404);
+        }
+
+        if ($paste->expires_at && $paste->expires_at->isPast()) {
+            $paste->delete();
+            return response()->json([
+                'message' => 'Not found.',
+            ], 404);
+        }
+
+        if ($paste->encrypted || $paste->password_protected) {
+            return response()->json([
+                'message' => 'Not found.',
+            ], 404);
+        }
+
+        $paste->increment('read_count');
+
+        $payload = [
+            'data' => $paste->content,
+            'key' => $paste->key,
+        ];
+
+        if ($paste->burn_after_read) {
+            $paste->delete();
+        }
+
+        return response()->json($payload);
     }
 }

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\DiscordController;
 use App\Http\Controllers\PasteController;
@@ -12,11 +13,22 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-Route::post('pastes', [PasteController::class, 'store'])->name('pastes.store');
+Route::post('pastes', [PasteController::class, 'store'])
+    ->middleware(['throttle:10,1'])
+    ->name('pastes.store');
 Route::delete('pastes/{key}', [PasteController::class, 'destroy'])->middleware(['auth'])->name('pastes.destroy');
 Route::get('{key}', [PasteController::class, 'show'])
     ->where('key', '[A-Za-z0-9]{32}')
     ->name('pastes.show');
+
+Route::post('documents', [PasteController::class, 'storeDocumentApi'])
+    ->middleware(['throttle:10,1'])
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('documents.store');
+Route::get('documents/{key}', [PasteController::class, 'showDocumentApi'])
+    ->where('key', '[A-Za-z0-9]{32}')
+    ->middleware(['throttle:10,1'])
+    ->name('documents.show');
 
 Route::get('dashboard', function (Request $request) {
     $user = $request->user();

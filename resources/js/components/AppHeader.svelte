@@ -13,7 +13,7 @@
 
 <header class="h-16 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
     <div class="flex h-full w-full items-center justify-between px-6">
-        <a href="/" class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Laracord</a>
+        <a href="/" class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Pastecord</a>
         <div class="flex items-center gap-3">
             <a
                 href="/"
