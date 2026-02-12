@@ -41,6 +41,12 @@
     <div class="flex h-full w-full items-center justify-between px-6">
         <a href="/" class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Laracord</a>
         <div class="flex items-center gap-3">
+            <a
+                href="/"
+                class="rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white"
+            >
+                New Paste
+            </a>
             <button
                 type="button"
                 on:click={toggleTheme}

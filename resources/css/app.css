@@ -1,7 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@import './highlightjs-dracula.css';
+@import './highlightjs-discord-dark.css';
+@import './highlightjs-discord-light.css';
 
 @source "../views";
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

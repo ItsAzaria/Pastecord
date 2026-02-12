@@ -1,0 +1,76 @@
+.dark .hljs {
+    display: block;
+    overflow-x: auto;
+    background: #1e1f22;
+    color: #dbdee1;
+}
+
+/* Keywords */
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-literal,
+.dark .hljs-section,
+.dark .hljs-link {
+    color: #c586c0;
+}
+
+/* Built-ins, types */
+.dark .hljs-built_in,
+.dark .hljs-type {
+    color: #4ec9b0;
+}
+
+/* Titles, function names, classes */
+.dark .hljs-title,
+.dark .hljs-title.function_,
+.dark .hljs-title.class_ {
+    color: #dcdcaa;
+}
+
+/* Strings */
+.dark .hljs-string,
+.dark .hljs-template-tag,
+.dark .hljs-template-variable {
+    color: #ce9178;
+}
+
+/* Numbers */
+.dark .hljs-number {
+    color: #b5cea8;
+}
+
+/* Variables, attributes */
+.dark .hljs-variable,
+.dark .hljs-attr,
+.dark .hljs-name {
+    color: #9cdcfe;
+}
+
+/* Comments */
+.dark .hljs-comment,
+.dark .hljs-quote {
+    color: #6a9955;
+    font-style: italic;
+}
+
+/* Meta */
+.dark .hljs-meta,
+.dark .hljs-meta-keyword {
+    color: #569cd6;
+}
+
+/* Symbols, bullets */
+.dark .hljs-symbol,
+.dark .hljs-bullet {
+    color: #d7ba7d;
+}
+
+/* Emphasis */
+.dark .hljs-emphasis {
+    font-style: italic;
+}
+
+/* Strong */
+.dark .hljs-strong {
+    font-weight: bold;
+}

@@ -1,0 +1,76 @@
+.hljs {
+    display: block;
+    overflow-x: auto;
+    background: #f2f3f5;
+    color: #2e3338;
+}
+
+/* Keywords */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-section,
+.hljs-link {
+    color: #7b3fa0;
+}
+
+/* Built-ins, types */
+.hljs-built_in,
+.hljs-type {
+    color: #1f8f7a;
+}
+
+/* Titles, function names, classes */
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_ {
+    color: #8a7a12;
+}
+
+/* Strings */
+.hljs-string,
+.hljs-template-tag,
+.hljs-template-variable {
+    color: #a64b2a;
+}
+
+/* Numbers */
+.hljs-number {
+    color: #6a8759;
+}
+
+/* Variables, attributes */
+.hljs-variable,
+.hljs-attr,
+.hljs-name {
+    color: #006bb3;
+}
+
+/* Comments */
+.hljs-comment,
+.hljs-quote {
+    color: #5f6a79;
+    font-style: italic;
+}
+
+/* Meta */
+.hljs-meta,
+.hljs-meta-keyword {
+    color: #005fa3;
+}
+
+/* Symbols, bullets */
+.hljs-symbol,
+.hljs-bullet {
+    color: #9a7b17;
+}
+
+/* Emphasis */
+.hljs-emphasis {
+    font-style: italic;
+}
+
+/* Strong */
+.hljs-strong {
+    font-weight: bold;
+}

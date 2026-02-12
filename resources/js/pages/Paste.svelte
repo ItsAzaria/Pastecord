@@ -1,9 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '@inertiajs/svelte';
-    import hljs from 'highlight.js';
+    import { HighlightAuto, LineNumbers } from 'svelte-highlight';
     import AppLayout from '../layouts/AppLayout.svelte';
     import { decrypt, decryptWithPassword } from '../lib/crypto';
+    import horizonDark from 'svelte-highlight/styles/horizon-dark';
+    import horizonLight from 'svelte-highlight/styles/horizon-light';
 
     type PastePayload = {
         key: string;
@@ -23,7 +25,11 @@
     let decryptError = '';
     let isDecrypting = false;
     let passwordInput = '';
-    let codeBlock: HTMLElement | null = null;
+    let copyStatus = '';
+    const resolveLanguageNames = (language: string | null | undefined) => {
+        if (!language || language === 'auto' || language === 'plaintext') return undefined;
+        return [language];
+    };
 
     const getKeyFromHash = () => {
         if (typeof window === 'undefined') return '';
@@ -102,6 +108,43 @@
         }
     };
 
+    const handleCopy = async () => {
+        if (!decryptedContent) return;
+        copyStatus = '';
+
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(decryptedContent);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = decryptedContent;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            copyStatus = 'Copied!';
+        } catch (error) {
+            copyStatus = error instanceof Error ? error.message : 'Unable to copy.';
+        } finally {
+            if (copyStatus === 'Copied!') {
+                setTimeout(() => {
+                    copyStatus = '';
+                }, 1500);
+            }
+        }
+    };
+
+    const handleViewRaw = () => {
+        if (!decryptedContent || typeof window === 'undefined') return;
+        const blob = new Blob([decryptedContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener');
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
     onMount(() => {
         tryAutoDecrypt();
     });
@@ -110,59 +153,40 @@
         tryAutoDecrypt();
     }
 
-    const applyHighlight = () => {
-        if (!codeBlock) return;
-        const content = decryptedContent ?? '';
-        codeBlock.textContent = content;
-        codeBlock.className = 'hljs';
-
-        if (!content) return;
-
-        const language = paste?.language ?? 'auto';
-        if (language && language !== 'auto' && language !== 'plaintext') {
-            codeBlock.classList.add(`language-${language}`);
-            try {
-                hljs.highlightElement(codeBlock);
-                return;
-            } catch (error) {
-                // fall through to auto detect
-            }
-        }
-
-        const result = hljs.highlightAuto(content);
-        codeBlock.innerHTML = result.value;
-    };
-
-    $: if (codeBlock) {
-        decryptedContent;
-        paste?.language;
-        applyHighlight();
-    }
+    $: languageNames = resolveLanguageNames(paste?.language ?? null);
 </script>
 
 <svelte:head>
-    <title>Paste {paste?.key ?? ''}</title>
+    <!-- {@html horizonDark} -->
+    <!-- {@html horizonLight} -->
 </svelte:head>
 
-<AppLayout>
-    <section class="flex flex-col gap-6">
-        <div class="space-y-2">
-            <h1 class="text-3xl font-semibold tracking-tight">Paste</h1>
-            {#if paste}
-                <p class="text-sm text-zinc-500">Key: <span class="font-mono">{paste.key}</span></p>
-            {/if}
-        </div>
-
-        {#if paste?.encrypted && paste.password_protected}
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <h2 class="text-lg font-medium">Password required</h2>
+<AppLayout mainClass="w-full max-w-none p-0 flex flex-col min-h-0">
+    {#if decryptError}
+        <section class="flex min-h-[70vh] items-center justify-center px-4 py-12">
+            <div class="max-w-md text-center">
+                <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Unable to decrypt paste</h1>
+                <p class="mt-2 text-sm text-red-600">{decryptError}</p>
+            </div>
+        </section>
+    {:else if !paste}
+        <section class="flex min-h-[70vh] items-center justify-center px-4 py-12">
+            <div class="max-w-md text-center">
+                <h1 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Paste not found</h1>
+                <p class="mt-2 text-sm text-zinc-500">The paste you are looking for does not exist or has expired.</p>
+            </div>
+        </section>
+    {:else if paste.encrypted && paste.password_protected && !decryptedContent}
+        <section class="flex min-h-[70vh] items-center justify-center px-4 py-12">
+            <div class="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <h1 class="text-lg font-medium text-zinc-900 dark:text-zinc-100">Password required</h1>
                 <p class="mt-2 text-sm text-zinc-500">Enter the password to decrypt this paste.</p>
-                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div class="mt-4 flex flex-col gap-3">
                     <input
                         type="password"
                         bind:value={passwordInput}
                         placeholder="Password"
-                        class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                        class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                     />
                     <button
                         type="button"
@@ -174,18 +198,60 @@
                     </button>
                 </div>
             </div>
-        {/if}
-
-        {#if decryptError}
-            <p class="text-sm text-red-600">{decryptError}</p>
-        {/if}
-
-        <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 class="text-lg font-medium">Content</h2>
-            <pre
-                class="mt-4 max-h-[32rem] overflow-auto rounded-md border border-zinc-200 bg-white p-4 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
-                <code bind:this={codeBlock} class="hljs"></code>
-            </pre>
-        </div>
-    </section>
+        </section>
+    {:else}
+        <section class="flex flex-1 min-h-0 w-full flex-col">
+            <div class="flex items-center justify-between border-b border-zinc-200 bg-white/90 px-4 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-300">
+                <div class="flex items-center gap-3">
+                    {#if languageNames?.length}
+                        <span class="rounded-full border border-zinc-200 px-2 py-0.5 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                            {languageNames[0]}
+                        </span>
+                    {/if}
+                    {#if copyStatus}
+                        <span class="text-xs text-emerald-600 dark:text-emerald-400">{copyStatus}</span>
+                    {/if}
+                </div>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        on:click={handleCopy}
+                        class="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white"
+                        disabled={!decryptedContent}
+                    >
+                        Copy
+                    </button>
+                    <button
+                        type="button"
+                        on:click={handleViewRaw}
+                        class="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white"
+                        disabled={!decryptedContent}
+                    >
+                        View raw
+                    </button>
+                </div>
+            </div>
+            <div class="paste-highlight flex-1 min-h-0 w-full overflow-auto bg-white text-sm text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+                <HighlightAuto code={decryptedContent ?? ''} {languageNames} langtag={Boolean(languageNames?.length)} let:highlighted>
+                    <LineNumbers {highlighted} hideBorder />
+                </HighlightAuto>
+            </div>
+        </section>
+    {/if}
 </AppLayout>
+
+<style>
+    .paste-highlight :global(pre) {
+        margin: 0;
+        min-height: 100%;
+    }
+
+    .paste-highlight :global(code) {
+        display: block;
+        min-height: 100%;
+    }
+
+    .paste-highlight :global(td) {
+        width: auto !important;
+    }
+</style>
