@@ -43,6 +43,13 @@
     let deleteMessage = '';
     let deleteError = '';
     let blockedMessage = '';
+    let accountMessage = '';
+    let accountError = '';
+    let isDeletingAccount = false;
+    let isAccountConfirmOpen = false;
+    let isPasteConfirmOpen = false;
+    let pasteToDelete: PasteSummary | null = null;
+    let isDeletingPaste = false;
 
     $: user = $page.props.auth?.user ?? null;
     $: pastes = ($page.props.pastes as PaginatedPastes | undefined)?.data ?? [];
@@ -57,8 +64,10 @@
     };
 
     const handleDelete = async (paste: PasteSummary) => {
+        if (isDeletingPaste) return;
         deleteMessage = '';
         deleteError = '';
+        isDeletingPaste = true;
         const csrfToken = getCsrfToken();
 
         try {
@@ -80,7 +89,78 @@
             deleteMessage = 'Paste deleted.';
         } catch (error) {
             deleteError = error instanceof Error ? error.message : 'Failed to delete paste.';
+        } finally {
+            isDeletingPaste = false;
+            pasteToDelete = null;
         }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (isDeletingAccount) return;
+        accountMessage = '';
+        accountError = '';
+        isDeletingAccount = true;
+        const csrfToken = getCsrfToken();
+
+        try {
+            const response = await fetch('/account', {
+                method: 'DELETE',
+                headers: {
+                    Accept: 'application/json',
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                },
+            });
+
+            if (!response.ok) {
+                const errorPayload = await response.json().catch(() => null);
+                accountError = errorPayload?.message ?? 'Failed to delete account.';
+                return;
+            }
+
+            accountMessage = 'Account deleted.';
+            if (typeof window !== 'undefined') {
+                window.location.href = '/';
+            }
+        } catch (error) {
+            accountError = error instanceof Error ? error.message : 'Failed to delete account.';
+        } finally {
+            isDeletingAccount = false;
+        }
+    };
+
+    const openAccountConfirm = () => {
+        accountMessage = '';
+        accountError = '';
+        isAccountConfirmOpen = true;
+    };
+
+    const closeAccountConfirm = () => {
+        if (isDeletingAccount) return;
+        isAccountConfirmOpen = false;
+    };
+
+    const confirmAccountDelete = async () => {
+        if (isDeletingAccount) return;
+        isAccountConfirmOpen = false;
+        await handleDeleteAccount();
+    };
+
+    const openPasteConfirm = (paste: PasteSummary) => {
+        deleteMessage = '';
+        deleteError = '';
+        pasteToDelete = paste;
+        isPasteConfirmOpen = true;
+    };
+
+    const closePasteConfirm = () => {
+        if (isDeletingPaste) return;
+        isPasteConfirmOpen = false;
+    };
+
+    const confirmPasteDelete = async () => {
+        if (!pasteToDelete || isDeletingPaste) return;
+        isPasteConfirmOpen = false;
+        await handleDelete(pasteToDelete);
     };
 </script>
 
@@ -92,7 +172,6 @@
     <section class="flex flex-col gap-6">
         <div class="space-y-2">
             <h1 class="text-3xl font-semibold tracking-tight">Dashboard</h1>
-            <p class="text-zinc-600 dark:text-zinc-400">This area is only visible to authenticated users.</p>
         </div>
 
         <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -113,6 +192,31 @@
                         {/if}
                     </div>
                 </div>
+                <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+                    <p class="text-sm text-zinc-500">Delete your account and all pastes linked to your Discord ID.</p>
+                    <button
+                        type="button"
+                        on:click={openAccountConfirm}
+                        class="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition hover:border-red-300 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-red-500/40 dark:text-red-300 dark:hover:border-red-400 dark:hover:text-red-200"
+                        disabled={isDeletingAccount}
+                    >
+                        {isDeletingAccount ? 'Deleting...' : 'Delete account'}
+                    </button>
+                </div>
+                {#if accountMessage}
+                    <div
+                        class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                    >
+                        {accountMessage}
+                    </div>
+                {/if}
+                {#if accountError}
+                    <div
+                        class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200"
+                    >
+                        {accountError}
+                    </div>
+                {/if}
             {/if}
         </div>
 
@@ -178,7 +282,7 @@
                                         type="button"
                                         on:click|stopPropagation={(event) => {
                                             event.preventDefault();
-                                            handleDelete(paste);
+                                            openPasteConfirm(paste);
                                         }}
                                         class="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-700 transition hover:border-red-300 hover:text-red-600 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-red-400 dark:hover:text-red-200"
                                         aria-label="Delete paste"
@@ -256,3 +360,61 @@
         </div>
     </section>
 </AppLayout>
+
+{#if isAccountConfirmOpen}
+    <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div class="absolute inset-0 bg-black/50" on:click={closeAccountConfirm}></div>
+        <div class="relative w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+            <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Delete account?</h3>
+            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                This will permanently delete your account and all pastes linked to your Discord ID. This action cannot be undone.
+            </p>
+            <div class="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                    type="button"
+                    on:click={closeAccountConfirm}
+                    class="rounded-md border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    on:click={confirmAccountDelete}
+                    class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={isDeletingAccount}
+                >
+                    {isDeletingAccount ? 'Deleting...' : 'Yes, delete'}
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if isPasteConfirmOpen}
+    <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div class="absolute inset-0 bg-black/50" on:click={closePasteConfirm}></div>
+        <div class="relative w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+            <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Delete paste?</h3>
+            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                This will permanently delete paste {pasteToDelete?.key}. This action cannot be undone.
+            </p>
+            <div class="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                    type="button"
+                    on:click={closePasteConfirm}
+                    class="rounded-md border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    on:click={confirmPasteDelete}
+                    class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={isDeletingPaste}
+                >
+                    {isDeletingPaste ? 'Deleting...' : 'Yes, delete'}
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}
