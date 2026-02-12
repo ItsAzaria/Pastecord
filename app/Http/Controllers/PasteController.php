@@ -68,4 +68,25 @@ class PasteController extends Controller
             'key' => $paste->key,
         ], 201);
     }
+
+    public function destroy(Request $request, string $key)
+    {
+        $user = $request->user();
+
+        if (!$user?->discord_id) {
+            abort(403, 'Discord account not linked.');
+        }
+
+        $paste = Paste::where('key', $key)->firstOrFail();
+
+        if ($paste->discord_id !== $user->discord_id) {
+            abort(403, 'You are not allowed to delete this paste.');
+        }
+
+        $paste->delete();
+
+        return response()->json([
+            'deleted' => true,
+        ]);
+    }
 }

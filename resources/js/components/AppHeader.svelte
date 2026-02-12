@@ -45,6 +45,12 @@
                     <div
                         class="absolute right-0 mt-2 w-44 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950"
                     >
+                        <a
+                            href="/dashboard"
+                            class="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+                        >
+                            Dashboard
+                        </a>
                         <form method="post" action="/logout">
                             <input type="hidden" name="_token" value={csrfToken} />
                             <button
