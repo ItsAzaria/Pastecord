@@ -1,36 +1,10 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
     import { page } from '@inertiajs/svelte';
 
     const csrfToken = typeof document !== 'undefined' ? (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '') : '';
 
     $: user = $page.props.auth?.user ?? null;
     $: avatarUrl = user?.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-
-    let theme: 'light' | 'dark' = 'light';
-
-    const applyTheme = (value: 'light' | 'dark') => {
-        if (typeof document === 'undefined') return;
-        document.documentElement.classList.toggle('dark', value === 'dark');
-    };
-
-    const toggleTheme = () => {
-        theme = theme === 'dark' ? 'light' : 'dark';
-        applyTheme(theme);
-        if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('theme', theme);
-        }
-    };
-
-    onMount(() => {
-        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('theme') : null;
-        if (stored === 'light' || stored === 'dark') {
-            theme = stored;
-        } else if (typeof window !== 'undefined') {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        applyTheme(theme);
-    });
 </script>
 
 <svelte:head>
@@ -47,39 +21,41 @@
             >
                 New Paste
             </a>
-            <button
-                type="button"
-                on:click={toggleTheme}
-                class="relative inline-flex h-8 w-14 items-center rounded-full border border-zinc-200 bg-zinc-100 transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
-                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                role="switch"
-                aria-checked={theme === 'dark'}
-            >
-                <span
-                    class={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition ${
-                        theme === 'dark' ? 'translate-x-7 bg-zinc-200' : 'translate-x-1'
-                    }`}
-                ></span>
-            </button>
             {#if user}
-                <div class="flex items-center gap-3 rounded-full border border-zinc-200 px-3 py-1 dark:border-zinc-800">
-                    <img src={avatarUrl} alt="Discord avatar" class="h-8 w-8 rounded-full" />
-                    <div class="text-sm">
-                        <div class="font-medium text-zinc-900 dark:text-zinc-100">{user.name}</div>
-                        {#if user.discord_username}
-                            <div class="text-xs text-zinc-500">@{user.discord_username}</div>
-                        {/if}
-                    </div>
-                </div>
-                <form method="post" action="/logout">
-                    <input type="hidden" name="_token" value={csrfToken} />
-                    <button
-                        type="submit"
-                        class="rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white"
+                <details class="relative">
+                    <summary
+                        class="flex list-none items-center gap-3 rounded-full border border-zinc-200 px-3 py-1 text-left transition hover:border-zinc-300 dark:border-zinc-800"
+                        aria-label="Account menu"
                     >
-                        Log out
-                    </button>
-                </form>
+                        <img src={avatarUrl} alt="Discord avatar" class="h-8 w-8 rounded-full" />
+                        <div class="text-sm">
+                            <div class="font-medium text-zinc-900 dark:text-zinc-100">{user.name}</div>
+                            {#if user.discord_username}
+                                <div class="text-xs text-zinc-500">@{user.discord_username}</div>
+                            {/if}
+                        </div>
+                        <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path
+                                fill-rule="evenodd"
+                                d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z"
+                                clip-rule="evenodd"
+                            />
+                        </svg>
+                    </summary>
+                    <div
+                        class="absolute right-0 mt-2 w-44 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950"
+                    >
+                        <form method="post" action="/logout">
+                            <input type="hidden" name="_token" value={csrfToken} />
+                            <button
+                                type="submit"
+                                class="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+                            >
+                                Log out
+                            </button>
+                        </form>
+                    </div>
+                </details>
             {:else}
                 <a href="/auth/discord" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500">
                     Log in with Discord
@@ -88,3 +64,13 @@
         </div>
     </div>
 </header>
+
+<style>
+    summary::-webkit-details-marker {
+        display: none;
+    }
+
+    summary {
+        list-style: none;
+    }
+</style>

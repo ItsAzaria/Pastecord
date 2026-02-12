@@ -4,6 +4,7 @@
     import { HighlightAuto, LineNumbers } from 'svelte-highlight';
     import AppLayout from '../layouts/AppLayout.svelte';
     import { decrypt, decryptWithPassword } from '../lib/crypto';
+    import { highlightLanguages } from '../lib/highlightLanguages';
     import horizonDark from 'svelte-highlight/styles/horizon-dark';
     import horizonLight from 'svelte-highlight/styles/horizon-light';
 
@@ -26,6 +27,8 @@
     let isDecrypting = false;
     let passwordInput = '';
     let copyStatus = '';
+    let languageOverride = 'auto';
+    let languageOverrideTouched = false;
     const resolveLanguageNames = (language: string | null | undefined) => {
         if (!language || language === 'auto' || language === 'plaintext') return undefined;
         return [language];
@@ -153,13 +156,12 @@
         tryAutoDecrypt();
     }
 
-    $: languageNames = resolveLanguageNames(paste?.language ?? null);
-</script>
+    $: if (paste && !languageOverrideTouched) {
+        languageOverride = paste.language ?? 'auto';
+    }
 
-<svelte:head>
-    <!-- {@html horizonDark} -->
-    <!-- {@html horizonLight} -->
-</svelte:head>
+    $: languageNames = resolveLanguageNames(languageOverride);
+</script>
 
 <AppLayout mainClass="w-full max-w-none p-0 flex flex-col min-h-0">
     {#if decryptError}
@@ -201,13 +203,25 @@
         </section>
     {:else}
         <section class="flex flex-1 min-h-0 w-full flex-col">
-            <div class="flex items-center justify-between border-b border-zinc-200 bg-white/90 px-4 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-300">
+            <div
+                class="flex items-center justify-between border-b border-zinc-200 bg-white/90 px-4 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-300"
+            >
                 <div class="flex items-center gap-3">
-                    {#if languageNames?.length}
-                        <span class="rounded-full border border-zinc-200 px-2 py-0.5 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                            {languageNames[0]}
-                        </span>
-                    {/if}
+                    <label class="flex items-center gap-2 text-xs text-zinc-500">
+                        <span class="sr-only">Highlight language</span>
+                        <select
+                            bind:value={languageOverride}
+                            on:change={() => {
+                                languageOverrideTouched = true;
+                            }}
+                            class="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                        >
+                            <option value="auto">Auto detect</option>
+                            {#each highlightLanguages as option}
+                                <option value={option.value}>{option.name}</option>
+                            {/each}
+                        </select>
+                    </label>
                     {#if copyStatus}
                         <span class="text-xs text-emerald-600 dark:text-emerald-400">{copyStatus}</span>
                     {/if}
