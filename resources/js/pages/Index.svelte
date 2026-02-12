@@ -18,6 +18,19 @@
     let saveError = '';
     let saveKey = '';
     let clientKey = '';
+    let draftSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    type DraftPayload = {
+        content: string;
+        language: string;
+        isEncrypted: boolean;
+        burnAfterRead: boolean;
+        expiresInDays: string | number;
+        expiresInHours: string | number;
+        expiresInMinutes: string | number;
+    };
+
+    const DRAFT_STORAGE_KEY = 'laracord:draft';
 
     const languageOptions = highlightLanguages;
 
@@ -43,6 +56,46 @@
         const hours = Number(expiresInHours) || 0;
         const minutes = Number(expiresInMinutes) || 0;
         return Math.max(0, days * 86400 + hours * 3600 + minutes * 60);
+    };
+
+    const loadDraft = () => {
+        if (typeof localStorage === 'undefined') return;
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return;
+        try {
+            const draft = JSON.parse(raw) as Partial<DraftPayload>;
+            content = typeof draft.content === 'string' ? draft.content : content;
+            language = typeof draft.language === 'string' ? draft.language : language;
+            isEncrypted = typeof draft.isEncrypted === 'boolean' ? draft.isEncrypted : isEncrypted;
+            burnAfterRead = typeof draft.burnAfterRead === 'boolean' ? draft.burnAfterRead : burnAfterRead;
+            expiresInDays = draft.expiresInDays ?? expiresInDays;
+            expiresInHours = draft.expiresInHours ?? expiresInHours;
+            expiresInMinutes = draft.expiresInMinutes ?? expiresInMinutes;
+        } catch {
+            localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
+    };
+
+    const clearDraft = () => {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+    };
+
+    const saveDraft = (draft: DraftPayload | null) => {
+        if (typeof localStorage === 'undefined' || !draft) return;
+        if (!draft.content.trim()) {
+            clearDraft();
+            return;
+        }
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    };
+
+    const scheduleDraftSave = (draft: DraftPayload) => {
+        if (typeof window === 'undefined') return;
+        if (draftSaveTimeout) {
+            clearTimeout(draftSaveTimeout);
+        }
+        draftSaveTimeout = setTimeout(() => saveDraft(draft), 300);
     };
 
     const handleSave = async () => {
@@ -110,6 +163,7 @@
             const data = await response.json().catch(() => null);
             saveKey = data?.key ?? '';
             if (saveKey) {
+                clearDraft();
                 const fragment = clientKey ? `#key=${encodeURIComponent(clientKey)}` : '';
                 router.visit(`/${saveKey}${fragment}`, { replace: true });
             }
@@ -121,6 +175,7 @@
     };
 
     onMount(() => {
+        loadDraft();
         const handler = (event: KeyboardEvent) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
                 event.preventDefault();
@@ -135,6 +190,16 @@
     $: expiresInDays = clamp(expiresInDays, 0, 365);
     $: expiresInHours = clamp(expiresInHours, 0, 23);
     $: expiresInMinutes = clamp(expiresInMinutes, 0, 59);
+
+    $: scheduleDraftSave({
+        content,
+        language,
+        isEncrypted,
+        burnAfterRead,
+        expiresInDays,
+        expiresInHours,
+        expiresInMinutes,
+    });
 </script>
 
 <AppLayout mainClass="flex-1 w-full px-0 py-0 h-full min-h-0">
