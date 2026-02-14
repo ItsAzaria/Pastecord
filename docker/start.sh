@@ -15,6 +15,9 @@ if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "base64:" ]; then
   php artisan key:generate --force
 fi
 
+# Always clear stale optimize caches so updated routes/config are picked up
+php artisan optimize:clear
+
 # Cache Laravel config for production only
 if [ "${APP_ENV}" = "production" ]; then
   php artisan config:cache

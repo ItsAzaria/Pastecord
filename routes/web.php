@@ -79,6 +79,9 @@ Route::delete('admin/pastes/{key}', [AdminController::class, 'destroyPaste'])
     ->where('key', '[A-Za-z0-9]{32}')
     ->middleware(['auth', 'admin'])
     ->name('admin.pastes.destroy');
+Route::post('admin/trigger-exception', [AdminController::class, 'triggerException'])
+    ->middleware(['auth', 'admin'])
+    ->name('admin.trigger-exception');
 
 Route::get('auth/discord', [DiscordController::class, 'redirect'])
     ->middleware(['throttle:30,1'])

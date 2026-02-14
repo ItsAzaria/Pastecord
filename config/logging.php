@@ -1,6 +1,7 @@
 <?php
 
 use Monolog\Handler\NullHandler;
+use Monolog\Handler\SlackWebhookHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
@@ -73,13 +74,21 @@ return [
             'replace_placeholders' => true,
         ],
 
-        'slack' => [
-            'driver' => 'slack',
-            'url' => env('LOG_SLACK_WEBHOOK_URL'),
-            'username' => env('LOG_SLACK_USERNAME', 'Laravel Log'),
-            'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
-            'level' => env('LOG_LEVEL', 'critical'),
-            'replace_placeholders' => true,
+        'discord' => [
+            'driver' => 'monolog',
+            'level' => env('DISCORD_LOG_LEVEL', 'error'),
+            'handler' => SlackWebhookHandler::class,
+            'handler_with' => [
+                'webhookUrl' => str_ends_with((string) env('DISCORD_LOG_WEBHOOK_URL', ''), '/slack')
+                    ? env('DISCORD_LOG_WEBHOOK_URL')
+                    : rtrim((string) env('DISCORD_LOG_WEBHOOK_URL', ''), '/') . '/slack',
+                'channel' => null,
+                'username' => env('DISCORD_LOG_USERNAME', 'Laravel Log'),
+                'emoji' => env('DISCORD_LOG_EMOJI', ':boom:'),
+                'includeContextAndExtra' => true,
+                'useAttachment' => true,
+                'useShortAttachment' => true,
+            ],
         ],
 
         'papertrail' => [

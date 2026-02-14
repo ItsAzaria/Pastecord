@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Paste;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class AdminController extends Controller
@@ -23,5 +25,14 @@ class AdminController extends Controller
             'deleted' => true,
             'key' => $key,
         ]);
+    }
+
+    public function triggerException()
+    {
+        Log::channel('discord')->error('Manual admin-triggered exception test.', [
+            'source' => 'admin.dashboard.button',
+        ]);
+
+        throw new Exception('Manual admin-triggered exception for Discord logging test.');
     }
 }

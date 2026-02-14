@@ -7,6 +7,7 @@
     let message = '';
     let error = '';
     let isDeleting = false;
+    let isTriggeringException = false;
 
     const handleDelete = async () => {
         if (isDeleting) return;
@@ -45,6 +46,43 @@
             isDeleting = false;
         }
     };
+
+    const handleTriggerException = async () => {
+        if (isTriggeringException) return;
+
+        message = '';
+        error = '';
+        isTriggeringException = true;
+
+        const csrfToken = getCsrfToken();
+
+        try {
+            const response = await fetch('/admin/trigger-exception', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                },
+            });
+
+            if (response.status >= 500) {
+                message = 'Test exception triggered. Check Discord for the error log.';
+                return;
+            }
+
+            if (!response.ok) {
+                const errorPayload = await response.json().catch(() => null);
+                error = errorPayload?.message ?? 'Failed to trigger test exception.';
+                return;
+            }
+
+            message = 'Request completed, but no exception was raised.';
+        } catch (fetchError) {
+            error = fetchError instanceof Error ? fetchError.message : 'Failed to trigger test exception.';
+        } finally {
+            isTriggeringException = false;
+        }
+    };
 </script>
 
 <svelte:head>
@@ -80,6 +118,18 @@
                     <span class="text-xs text-zinc-500">Deletion is immediate and cannot be undone.</span>
                 </div>
             </form>
+
+            <div class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+                <p class="text-sm text-zinc-500">Trigger a test exception to verify Discord error logging.</p>
+                <button
+                    type="button"
+                    class="mt-3 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={isTriggeringException}
+                    on:click={handleTriggerException}
+                >
+                    {isTriggeringException ? 'Triggering...' : 'Trigger test exception'}
+                </button>
+            </div>
 
             {#if message}
                 <div
