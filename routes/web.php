@@ -71,8 +71,14 @@ Route::get('dashboard', function (Request $request) {
     ]);
 })->middleware(['auth'])->name('dashboard');
 
-Route::get('auth/discord', [DiscordController::class, 'redirect'])->name('auth.discord');
-Route::get('auth/discord/callback', [DiscordController::class, 'callback'])->name('auth.discord.callback');
-Route::post('logout', [DiscordController::class, 'logout'])->name('logout');
+Route::get('auth/discord', [DiscordController::class, 'redirect'])
+    ->middleware(['throttle:30,1'])
+    ->name('auth.discord');
+Route::get('auth/discord/callback', [DiscordController::class, 'callback'])
+    ->middleware(['throttle:30,1'])
+    ->name('auth.discord.callback');
+Route::post('logout', [DiscordController::class, 'logout'])
+    ->middleware(['throttle:30,1'])
+    ->name('logout');
 Route::delete('account', [DiscordController::class, 'destroy'])->middleware(['auth'])->name('account.destroy');
 
