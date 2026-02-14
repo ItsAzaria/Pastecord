@@ -1,10 +1,20 @@
 <script lang="ts">
     import { page } from '@inertiajs/svelte';
 
+    const DEFAULT_AVATAR = 'https://cdn.discordapp.com/embed/avatars/0.png';
+
     const csrfToken = typeof document !== 'undefined' ? (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '') : '';
 
     $: user = $page.props.auth?.user ?? null;
-    $: avatarUrl = user?.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+    $: avatarUrl = user?.avatar || DEFAULT_AVATAR;
+
+    const handleAvatarError = (event: Event) => {
+        const image = event.currentTarget as HTMLImageElement;
+
+        if (image.src !== DEFAULT_AVATAR) {
+            image.src = DEFAULT_AVATAR;
+        }
+    };
 </script>
 
 <svelte:head>
@@ -27,7 +37,7 @@
                         class="flex list-none items-center gap-3 rounded-full border border-zinc-200 px-3 py-1 text-left transition hover:border-zinc-300 dark:border-zinc-800"
                         aria-label="Account menu"
                     >
-                        <img src={avatarUrl} alt="Discord avatar" class="h-8 w-8 rounded-full" />
+                        <img src={avatarUrl} alt="Discord avatar" class="h-8 w-8 rounded-full" on:error={handleAvatarError} />
                         <div class="text-sm">
                             <div class="font-medium text-zinc-900 dark:text-zinc-100">{user.name}</div>
                             {#if user.discord_username}

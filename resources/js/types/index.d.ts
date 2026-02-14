@@ -27,6 +27,7 @@ export interface User {
     id: number;
     name: string;
     avatar?: string | null;
+    discord_id?: string | null;
     discord_username?: string | null;
     is_admin: boolean;
 }

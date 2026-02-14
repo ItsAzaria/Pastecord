@@ -56,6 +56,13 @@ class User extends Authenticatable
 
     public function getAvatarAttribute(): ?string
     {
-        return $this->discord_avatar;
+        return $this->discord_avatar ?: $this->default_avatar;
+    }
+
+    public function getDefaultAvatarAttribute(): string
+    {
+        $defaultIndex = ((int) ($this->discord_id ?? 0)) % 6;
+
+        return "https://cdn.discordapp.com/embed/avatars/{$defaultIndex}.png";
     }
 }

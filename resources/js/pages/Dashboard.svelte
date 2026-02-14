@@ -157,10 +157,17 @@
         isPasteConfirmOpen = false;
     };
 
+    const DEFAULT_AVATAR = 'https://cdn.discordapp.com/embed/avatars/0.png';
     const confirmPasteDelete = async () => {
         if (!pasteToDelete || isDeletingPaste) return;
         isPasteConfirmOpen = false;
         await handleDelete(pasteToDelete);
+    };
+    const handleAvatarError = (event: Event) => {
+        const image = event.currentTarget as HTMLImageElement;
+        if (image.src !== DEFAULT_AVATAR) {
+            image.src = DEFAULT_AVATAR;
+        }
     };
 </script>
 
@@ -178,7 +185,7 @@
             <h2 class="text-lg font-medium">Connected account</h2>
             {#if user}
                 <div class="mt-4 flex items-center gap-4">
-                    <img src={user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'} alt="Discord avatar" class="h-14 w-14 rounded-full" />
+                    <img src={user.avatar || DEFAULT_AVATAR} alt="Discord avatar" class="h-14 w-14 rounded-full" on:error={handleAvatarError} />
                     <div>
                         <div class="text-base font-semibold">{user.name}</div>
                         {#if user.discord_username}
