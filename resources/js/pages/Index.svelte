@@ -7,7 +7,7 @@
 
     let isMenuOpen = false;
     let language = 'auto';
-    let isEncrypted = true;
+    let isEncrypted = false;
     let burnAfterRead = false;
     let password = '';
     let content = '';
