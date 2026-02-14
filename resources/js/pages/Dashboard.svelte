@@ -187,9 +187,6 @@
                         {#if user.discord_id}
                             <div class="text-sm text-zinc-500">Discord ID: {user.discord_id}</div>
                         {/if}
-                        {#if user.email}
-                            <div class="text-sm text-zinc-500">{user.email}</div>
-                        {/if}
                     </div>
                 </div>
                 <div class="mt-6 flex flex-wrap items-center justify-between gap-3">

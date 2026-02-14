@@ -48,4 +48,8 @@ COPY ./docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
 COPY ./docker/start.sh /start.sh
 RUN chmod +x /start.sh
 
+# Copy scheduler entrypoint
+COPY ./docker/schedule.sh /schedule.sh
+RUN chmod +x /schedule.sh
+
 ENTRYPOINT ["/start.sh"]

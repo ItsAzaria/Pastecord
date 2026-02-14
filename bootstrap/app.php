@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        $middleware->redirectGuestsTo(fn () => route('auth.discord'));
+
         $middleware->alias([
             'admin' => EnsureAdmin::class,
         ]);

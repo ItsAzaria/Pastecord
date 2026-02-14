@@ -245,7 +245,7 @@
                     </button>
                 </div>
             </div>
-            <div class="paste-highlight flex flex-1 min-h-0 w-full flex-col overflow-auto bg-white text-sm text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+            <div class="paste-highlight flex-1 min-h-0 w-full overflow-auto bg-white text-sm text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
                 <HighlightAuto code={decryptedContent ?? ''} {languageNames} langtag={Boolean(languageNames?.length)} let:highlighted>
                     <LineNumbers {highlighted} hideBorder />
                 </HighlightAuto>
@@ -284,7 +284,7 @@
         align-self: stretch;
     }
 
-    .paste-highlight :global(tbody) {
-        height: 100%;
+    .paste-highlight :global(tbody.hljs) {
+        height: calc(100vh - 111px);
     }
 </style>

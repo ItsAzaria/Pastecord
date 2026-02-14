@@ -51,7 +51,7 @@
                         >
                             Dashboard
                         </a>
-                        {#if user?.admin}
+                        {#if user?.is_admin}
                             <a
                                 href="/admin"
                                 class="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"

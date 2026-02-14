@@ -11,9 +11,21 @@ use Inertia\Inertia;
 
 class PasteController extends Controller
 {
-    public function show(string $key)
+    public function show(Request $request, string $key)
     {
         $paste = Paste::where('key', $key)->firstOrFail();
+
+        if ($paste->expires_at && $paste->expires_at->isPast()) {
+            $paste->delete();
+            abort(404);
+        }
+
+        $paste->increment('read_count');
+        $paste->refresh();
+
+        if ($paste->burn_after_read && $paste->read_count >= 2) {
+            $paste->delete();
+        }
 
         return Inertia::render('Paste', [
             'paste' => [
@@ -27,21 +39,31 @@ class PasteController extends Controller
                 'burn_after_read' => $paste->burn_after_read,
                 'expires_at' => $paste->expires_at?->toIso8601String(),
             ],
-        ]);
+        ])->toResponse($request)->header('Cache-Control', 'no-store, max-age=0');
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'content' => ['required', 'string'],
+        $maxContentLength = (int) config('paste.max_content_length', 1000000);
+
+        $validator = Validator::make($request->all(), [
+            'content' => ['required', 'string', 'max:'.$maxContentLength],
             'encrypted' => ['sometimes', 'boolean'],
             'password_protected' => ['sometimes', 'boolean'],
-            'init_vector' => ['nullable', 'string', 'max:128', Rule::requiredIf($request->boolean('encrypted'))],
-            'salt' => ['nullable', 'string', 'max:128', Rule::requiredIf($request->boolean('password_protected'))],
+            'init_vector' => ['nullable', 'string', 'max:64', Rule::requiredIf($request->boolean('encrypted'))],
+            'salt' => ['nullable', 'string', 'max:64', Rule::requiredIf($request->boolean('password_protected'))],
             'language' => ['nullable', 'string', 'max:32'],
             'burn_after_read' => ['sometimes', 'boolean'],
             'expires_in_seconds' => ['nullable', 'integer', 'min:0', 'max:31536000'],
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            if ($request->boolean('password_protected') && ! $request->boolean('encrypted')) {
+                $validator->errors()->add('encrypted', 'Password protected pastes must be encrypted.');
+            }
+        });
+
+        $validated = $validator->validate();
 
         $expiresIn = (int) ($validated['expires_in_seconds'] ?? 0);
         $expiresAt = $expiresIn > 0 ? now()->addSeconds($expiresIn) : null;
@@ -121,6 +143,14 @@ class PasteController extends Controller
             ], 422);
         }
 
+        $maxContentLength = (int) config('paste.max_content_length', 1000000);
+        if (mb_strlen($content) > $maxContentLength) {
+            return response()->json([
+                'message' => 'Content is too large.',
+                'errors' => ['content' => ['Content exceeds the maximum allowed length.']],
+            ], 422);
+        }
+
         $language = 'auto';
 
         do {
@@ -172,15 +202,17 @@ class PasteController extends Controller
 
         $paste->increment('read_count');
 
+        $paste->refresh();
+
         $payload = [
             'data' => $paste->content,
             'key' => $paste->key,
         ];
 
-        if ($paste->burn_after_read) {
+        if ($paste->burn_after_read && $paste->read_count >= 2) {
             $paste->delete();
         }
 
-        return response()->json($payload);
+        return response()->json($payload)->header('Cache-Control', 'no-store, max-age=0');
     }
 }

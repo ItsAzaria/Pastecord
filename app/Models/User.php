@@ -18,13 +18,11 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
-        'email',
         'password',
         'admin',
         'discord_id',
         'discord_username',
         'discord_avatar',
-        'email_verified_at',
     ];
 
     /**
@@ -44,7 +42,6 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'admin' => 'boolean',
     ];
 

@@ -16,7 +16,7 @@ class DiscordController extends Controller
     public function redirect(): RedirectResponse
     {
         return Socialite::driver('discord')
-            ->scopes(['identify', 'email'])
+            ->scopes(['identify'])
             ->redirect();
     }
 
@@ -28,7 +28,6 @@ class DiscordController extends Controller
             ['discord_id' => $discordUser->getId()],
             [
                 'name' => $discordUser->getName() ?: ($discordUser->getNickname() ?: 'Discord User'),
-                'email' => $discordUser->getEmail(),
                 'discord_username' => $discordUser->getNickname() ?: $discordUser->getName(),
                 'discord_avatar' => $discordUser->getAvatar(),
             ]

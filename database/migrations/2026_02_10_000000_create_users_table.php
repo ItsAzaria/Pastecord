@@ -15,10 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('discord_id')->unique();
             $table->string('name');
-            $table->string('email')->nullable()->unique();
             $table->string('discord_username')->nullable();
             $table->string('discord_avatar')->nullable();
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->rememberToken();
             $table->timestamps();

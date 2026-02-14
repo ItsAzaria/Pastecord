@@ -17,7 +17,7 @@
     @inertiaHead
 
     {{-- Inline script to detect system dark mode preference and apply it immediately --}}
-    <script>
+    <script nonce="{{ $cspNonce ?? '' }}">
         (function() {
             const appearance = '{{ $appearance ?? "system" }}';
 
@@ -32,7 +32,7 @@
     </script>
 
     {{-- Inline style to set the HTML background color based on our theme in app.css --}}
-    <style>
+    <style nonce="{{ $cspNonce ?? '' }}">
         html {
             background-color: oklch(1 0 0);
         }
