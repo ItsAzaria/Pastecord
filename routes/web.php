@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Inertia\Inertia;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\DiscordController;
 use App\Http\Controllers\PasteController;
 use App\Models\Paste;
@@ -70,6 +71,14 @@ Route::get('dashboard', function (Request $request) {
         'pastes' => $pastes,
     ]);
 })->middleware(['auth'])->name('dashboard');
+
+Route::get('admin', [AdminController::class, 'index'])
+    ->middleware(['auth', 'admin'])
+    ->name('admin.dashboard');
+Route::delete('admin/pastes/{key}', [AdminController::class, 'destroyPaste'])
+    ->where('key', '[A-Za-z0-9]{32}')
+    ->middleware(['auth', 'admin'])
+    ->name('admin.pastes.destroy');
 
 Route::get('auth/discord', [DiscordController::class, 'redirect'])
     ->middleware(['throttle:30,1'])
