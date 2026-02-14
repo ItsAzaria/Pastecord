@@ -34,10 +34,7 @@
             <p class="text-sm text-zinc-500">{description}</p>
         </div>
         <div class="flex flex-wrap items-center justify-center gap-3">
-            <a
-                href="/"
-                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
-            >
+            <a href="/" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500">
                 Create a new paste
             </a>
             <button
