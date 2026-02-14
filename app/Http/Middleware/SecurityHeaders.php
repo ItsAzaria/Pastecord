@@ -37,7 +37,7 @@ class SecurityHeaders
             "object-src 'none'",
             "img-src 'self' data: blob: https://cdn.discordapp.com",
             "font-src 'self' https://fonts.bunny.net",
-            "style-src 'self' 'nonce-{$nonce}' https://fonts.bunny.net",
+            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "script-src 'self' 'nonce-{$nonce}'",
             "connect-src 'self' https://fonts.bunny.net",
             "frame-src 'none'",
