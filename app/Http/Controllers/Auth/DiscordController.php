@@ -16,7 +16,7 @@ class DiscordController extends Controller
     public function redirect(): RedirectResponse
     {
         return Socialite::driver('discord')
-            ->scopes(['identify'])
+            ->setScopes(['identify'])
             ->redirect();
     }
 
