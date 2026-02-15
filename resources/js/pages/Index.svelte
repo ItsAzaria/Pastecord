@@ -109,6 +109,11 @@
             return;
         }
 
+        if (password.trim() && !isEncrypted) {
+            saveError = 'Enable encryption to use a password.';
+            return;
+        }
+
         isSaving = true;
 
         try {
@@ -190,6 +195,9 @@
     $: expiresInDays = clamp(expiresInDays, 0, 365);
     $: expiresInHours = clamp(expiresInHours, 0, 23);
     $: expiresInMinutes = clamp(expiresInMinutes, 0, 59);
+    $: if (password.trim() && !isEncrypted) {
+        isEncrypted = true;
+    }
 
     $: scheduleDraftSave({
         content,
