@@ -36,8 +36,6 @@ services:
         restart: unless-stopped
         env_file:
             - .env
-        ports:
-            - "80:80"
         volumes:
             - app_data:/var/www
             - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
@@ -46,6 +44,7 @@ services:
             - app
         networks:
             - app-network
+            - web
 
     postgres:
         image: postgres:15
@@ -76,6 +75,7 @@ services:
             - postgres
         networks:
             - app-network
+            - web
 
 networks:
     app-network:
