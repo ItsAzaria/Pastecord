@@ -35,6 +35,14 @@
         }).format(date);
     };
 
+    const formatPaginationLabel = (label: string) =>
+        label
+            .replace(/<[^>]*>/g, '')
+            .replace(/&laquo;/g, '«')
+            .replace(/&raquo;/g, '»')
+            .replace(/&amp;/g, '&')
+            .trim();
+
     const isClientEncrypted = (paste: PasteSummary) => paste.encrypted && !paste.password_protected;
 
     const getCsrfToken = () => (typeof document !== 'undefined' ? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') : null);
@@ -268,7 +276,7 @@
                 </div>
             {:else}
                 <div class="mt-6 grid gap-4">
-                    {#each localPastes as paste}
+                    {#each localPastes as paste (paste.key)}
                         <a
                             href={`/${paste.key}`}
                             on:click={(event) => handlePasteClick(event, paste)}
@@ -312,7 +320,7 @@
                             </div>
                             <div class="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
                                 <span class="rounded-full bg-zinc-100 px-2 py-1 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                                    {paste.language || 'plaintext'}
+                                    Language: {paste.language || 'plaintext'}
                                 </span>
                                 {#if paste.encrypted}
                                     <span class="rounded-full bg-emerald-100 px-2 py-1 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
@@ -342,7 +350,7 @@
 
                 {#if pagination.length > 1}
                     <nav class="mt-6 flex flex-wrap gap-2">
-                        {#each pagination as link}
+                        {#each pagination as link (`${link.label}:${link.url ?? 'none'}:${link.active}`)}
                             {#if link.url}
                                 <a
                                     href={link.url}
@@ -352,10 +360,10 @@
                                             : 'border border-zinc-200 text-zinc-700 hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white'
                                     }`}
                                 >
-                                    {@html link.label}
+                                    {formatPaginationLabel(link.label)}
                                 </a>
                             {:else}
-                                <span class="rounded-md px-3 py-2 text-sm text-zinc-400">{@html link.label}</span>
+                                <span class="rounded-md px-3 py-2 text-sm text-zinc-400">{formatPaginationLabel(link.label)}</span>
                             {/if}
                         {/each}
                     </nav>
@@ -367,7 +375,7 @@
 
 {#if isAccountConfirmOpen}
     <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div class="absolute inset-0 bg-black/50" on:click={closeAccountConfirm}></div>
+        <button type="button" class="absolute inset-0 bg-black/50" on:click={closeAccountConfirm} aria-label="Close dialog"></button>
         <div class="relative w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
             <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Delete account?</h3>
             <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -396,7 +404,7 @@
 
 {#if isPasteConfirmOpen}
     <div class="fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div class="absolute inset-0 bg-black/50" on:click={closePasteConfirm}></div>
+        <button type="button" class="absolute inset-0 bg-black/50" on:click={closePasteConfirm} aria-label="Close dialog"></button>
         <div class="relative w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
             <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Delete paste?</h3>
             <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">

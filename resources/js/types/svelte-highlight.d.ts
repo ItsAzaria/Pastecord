@@ -22,6 +22,7 @@ declare module 'svelte-highlight' {
 
     export class LineNumbers extends SvelteComponent<{
         highlighted: string;
+        hideBorder?: boolean;
         'padding-right'?: string;
     }> { }
 }

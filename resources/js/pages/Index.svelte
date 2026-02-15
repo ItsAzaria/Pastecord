@@ -273,7 +273,7 @@
                         class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-950"
                     >
                         <option value="auto">Auto Detect</option>
-                        {#each languageOptions as option}
+                        {#each languageOptions as option (option.value)}
                             <option value={option.value}>{option.name}</option>
                         {/each}
                     </select>
@@ -300,8 +300,8 @@
                     <input type="checkbox" bind:checked={burnAfterRead} class="h-4 w-4 accent-[#5865F2]" />
                 </label>
 
-                <div class="space-y-2">
-                    <label class="text-sm font-medium">Expires in</label>
+                <fieldset class="space-y-2">
+                    <legend class="text-sm font-medium">Expires in</legend>
                     <div class="flex items-center gap-2">
                         <div class="flex items-center gap-2">
                             <input
@@ -334,7 +334,7 @@
                             <span class="text-xs text-zinc-500">M</span>
                         </div>
                     </div>
-                </div>
+                </fieldset>
             </div>
         </aside>
     </div>

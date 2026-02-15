@@ -155,8 +155,7 @@
         destroyCharts();
     });
 
-    $: if (isMounted) {
-        trendKey;
+    $: if (isMounted && typeof trendKey === 'string') {
         void renderCharts();
     }
 
@@ -330,7 +329,7 @@
                         <p class="mt-2 text-sm text-zinc-500">No language data available.</p>
                     {:else}
                         <div class="mt-3 space-y-3">
-                            {#each topLanguages as item}
+                            {#each topLanguages as item (item.language)}
                                 <div>
                                     <div class="mb-1 flex items-center justify-between text-xs text-zinc-500">
                                         <span>{item.language}</span>

@@ -2,11 +2,10 @@
     import { onMount } from 'svelte';
     import { page } from '@inertiajs/svelte';
     import { HighlightAuto, LineNumbers } from 'svelte-highlight';
+    import type { LanguageName } from 'svelte-highlight/languages';
     import AppLayout from '../layouts/AppLayout.svelte';
     import { decrypt, decryptWithPassword } from '../lib/crypto';
     import { highlightLanguages } from '../lib/highlightLanguages';
-    import horizonDark from 'svelte-highlight/styles/horizon-dark';
-    import horizonLight from 'svelte-highlight/styles/horizon-light';
 
     type PastePayload = {
         key: string;
@@ -29,9 +28,9 @@
     let copyStatus = '';
     let languageOverride = 'auto';
     let languageOverrideTouched = false;
-    const resolveLanguageNames = (language: string | null | undefined) => {
+    const resolveLanguageNames = (language: string | null | undefined): LanguageName[] | undefined => {
         if (!language || language === 'auto' || language === 'plaintext') return undefined;
-        return [language];
+        return [language as LanguageName];
     };
 
     const getKeyFromHash = () => {
@@ -217,7 +216,7 @@
                             class="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
                         >
                             <option value="auto">Auto detect</option>
-                            {#each highlightLanguages as option}
+                            {#each highlightLanguages as option (option.value)}
                                 <option value={option.value}>{option.name}</option>
                             {/each}
                         </select>
