@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { lazy, Workspace } from 'modern-monaco';
     import { router } from '@inertiajs/svelte';
     import AppLayout from '../layouts/AppLayout.svelte';
     import { encrypt, encryptWithPassword } from '../lib/crypto';
@@ -11,6 +12,36 @@
     let burnAfterRead = false;
     let password = '';
     let content = '';
+    let editorEl: HTMLElement;
+    let workspace: any;
+
+    onMount(() => {
+        workspace = new Workspace({
+            initialFiles: {
+                'paste.txt': content,
+            },
+            entryFile: 'paste.txt',
+        });
+        lazy({
+            workspace,
+        });
+
+        workspace.onDidChangeContent?.(() => {
+            const model = workspace.getModel('paste.txt');
+            if (model) content = model.getValue();
+        });
+
+        loadDraft();
+        const handler = (event: KeyboardEvent) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                handleSave();
+            }
+        };
+
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    });
     let expiresInDays: string | number = '';
     let expiresInHours: string | number = '';
     let expiresInMinutes: string | number = '';
@@ -179,19 +210,6 @@
         }
     };
 
-    onMount(() => {
-        loadDraft();
-        const handler = (event: KeyboardEvent) => {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-                event.preventDefault();
-                handleSave();
-            }
-        };
-
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    });
-
     $: expiresInDays = clamp(expiresInDays, 0, 365);
     $: expiresInHours = clamp(expiresInHours, 0, 23);
     $: expiresInMinutes = clamp(expiresInMinutes, 0, 59);
@@ -213,11 +231,10 @@
 <AppLayout mainClass="flex-1 w-full px-0 py-0 h-full min-h-0">
     <div class="flex h-full w-full min-h-0">
         <div class="relative flex h-full min-h-0 flex-1">
-            <textarea
-                bind:value={content}
-                placeholder="Paste or type your content here..."
-                class="h-[calc(100vh-4rem)] w-full flex-1 resize-none bg-white px-6 py-6 text-base text-zinc-900 outline-none placeholder:text-zinc-400 dark:bg-zinc-950 dark:text-zinc-100"
-            ></textarea>
+            <div class="h-[calc(100vh-4rem)] w-full flex-1 min-h-0">
+                <monaco-editor id="monaco-editor" class="h-full w-full flex-1 bg-white px-0 py-0 dark:bg-zinc-950" style="min-width:0;"
+                ></monaco-editor>
+            </div>
 
             <button
                 type="button"
