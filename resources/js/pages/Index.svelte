@@ -1,10 +1,12 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { lazy, Workspace } from 'modern-monaco';
+    import { onDestroy, onMount } from 'svelte';
+    import { init } from 'modern-monaco';
     import { router } from '@inertiajs/svelte';
     import AppLayout from '../layouts/AppLayout.svelte';
     import { encrypt, encryptWithPassword } from '../lib/crypto';
-    import { highlightLanguages } from '../lib/highlightLanguages';
+    import { allLanguages, highlightLanguages } from '../lib/highlightLanguages';
+    import { editor } from 'modern-monaco/editor-core';
+    import hljs from 'highlight.js';
 
     let isMenuOpen = false;
     let language = 'auto';
@@ -12,36 +14,93 @@
     let burnAfterRead = false;
     let password = '';
     let content = '';
-    let editorEl: HTMLElement;
-    let workspace: any;
 
-    onMount(() => {
-        workspace = new Workspace({
-            initialFiles: {
-                'paste.txt': content,
-            },
-            entryFile: 'paste.txt',
-        });
-        lazy({
-            workspace,
-        });
+    let monacoInstance: Awaited<ReturnType<typeof init>>;
+    let monacoModel: editor.ITextModel;
+    let codeEditor: editor.IStandaloneCodeEditor;
 
-        workspace.onDidChangeContent?.(() => {
-            const model = workspace.getModel('paste.txt');
-            if (model) content = model.getValue();
-        });
+    let initialized = false;
 
+    onMount(async () => {
         loadDraft();
-        const handler = (event: KeyboardEvent) => {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-                event.preventDefault();
-                handleSave();
-            }
-        };
+
+        monacoInstance = await init({
+            themes: ['one-light', 'one-dark-pro'],
+        });
+
+        const uri = monacoInstance.Uri.parse('file:///paste.txt');
+        let model = monacoInstance.editor.getModel(uri);
+        if (!model) {
+            monacoModel = monacoInstance.editor.createModel(content, language === 'auto' ? 'plaintext' : language, uri);
+        } else {
+            monacoModel = model;
+        }
+
+        codeEditor = monacoInstance.editor.create(document.getElementById('monaco-editor')!, {
+            padding: {
+                top: 32,
+            },
+            model: monacoModel,
+            formatOnPaste: true,
+        });
+
+        codeEditor.focus();
+
+        codeEditor.onDidChangeModelContent(() => {
+            content = codeEditor.getValue();
+        });
+
+        updateMonacoTheme();
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
 
         window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
+
+        initialized = true;
     });
+
+    onDestroy(() => {
+        window.removeEventListener('keydown', handler);
+        observer.disconnect();
+        codeEditor?.dispose();
+        monacoModel?.dispose();
+    });
+
+    const observer = new MutationObserver(updateMonacoTheme);
+
+    const handler = (event: KeyboardEvent) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            handleSave();
+        }
+    };
+
+    $: if (initialized && language && content) {
+        updateMonacoLanguage();
+    }
+
+    function updateMonacoTheme() {
+        const isDark = document.documentElement.classList.contains('dark');
+        monacoInstance.editor.setTheme(isDark ? 'one-dark-pro' : 'one-light');
+    }
+
+    function updateMonacoLanguage() {
+        const lang = getLanguage();
+
+        monacoInstance.editor.setModelLanguage(monacoModel, lang);
+    }
+
+    function getLanguage() {
+        if (language !== 'auto') return language;
+
+        const result = hljs.highlightAuto(content, highlightLanguages);
+
+        return result.language || 'plaintext';
+    }
+
     let expiresInDays: string | number = '';
     let expiresInHours: string | number = '';
     let expiresInMinutes: string | number = '';
@@ -63,7 +122,7 @@
 
     const DRAFT_STORAGE_KEY = 'pastecord:draft';
 
-    const languageOptions = highlightLanguages;
+    const languageOptions = allLanguages;
 
     const toggleMenu = () => {
         isMenuOpen = !isMenuOpen;
@@ -232,8 +291,7 @@
     <div class="flex h-full w-full min-h-0">
         <div class="relative flex h-full min-h-0 flex-1">
             <div class="h-[calc(100vh-4rem)] w-full flex-1 min-h-0">
-                <monaco-editor id="monaco-editor" class="h-full w-full flex-1 bg-white px-0 py-0 dark:bg-zinc-950" style="min-width:0;"
-                ></monaco-editor>
+                <monaco-editor id="monaco-editor" class="block h-full"></monaco-editor>
             </div>
 
             <button

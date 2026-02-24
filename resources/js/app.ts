@@ -16,3 +16,16 @@ createInertiaApp({
         }
     },
 });
+
+// Suppress Monaco Editor errors for now - https://github.com/esm-dev/modern-monaco/issues/56
+window.addEventListener('error', function (event) {
+    if (event.message && event.message.includes("Could not find source file: 'file:///paste.txt'")) {
+        event.preventDefault();
+    }
+});
+
+window.addEventListener('unhandledrejection', function (event) {
+    if (event.reason && event.reason.message && event.reason.message.includes("Could not find source file: 'file:///paste.txt'")) {
+        event.preventDefault();
+    }
+});

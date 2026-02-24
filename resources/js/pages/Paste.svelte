@@ -1,11 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { page } from '@inertiajs/svelte';
-    import { HighlightAuto, LineNumbers } from 'svelte-highlight';
-    import type { LanguageName } from 'svelte-highlight/languages';
     import AppLayout from '../layouts/AppLayout.svelte';
     import { decrypt, decryptWithPassword } from '../lib/crypto';
-    import { highlightLanguages } from '../lib/highlightLanguages';
+    import { allLanguages, highlightLanguages } from '../lib/highlightLanguages';
+    import { init } from 'modern-monaco';
+    import hljs from 'highlight.js';
+    import { editor } from 'modern-monaco/editor-core';
 
     type PastePayload = {
         key: string;
@@ -28,117 +29,82 @@
     let copyStatus = '';
     let languageOverride = 'auto';
     let languageOverrideTouched = false;
-    let pasteHighlightContainer: HTMLDivElement | null = null;
-    let lineSelectionStart: number | null = null;
-    let lineSelectionEnd: number | null = null;
-    let lineSelectionObserver: MutationObserver | null = null;
 
-    const resolveLanguageNames = (language: string | null | undefined): LanguageName[] | undefined => {
-        if (!language || language === 'auto' || language === 'plaintext') return undefined;
-        return [language as LanguageName];
-    };
+    let monacoInstance: Awaited<ReturnType<typeof init>>;
+    let monacoModel: editor.ITextModel;
+    let codeEditor: editor.IStandaloneCodeEditor;
+
+    let initialized = false;
+
+    onMount(async () => {
+        tryAutoDecrypt();
+
+        if (!initialized && decryptedContent) {
+            await initMonaco();
+        }
+    });
+
+    $: if (!initialized && decryptedContent) {
+        initMonaco();
+    }
+
+    async function initMonaco() {
+        monacoInstance = await init({
+            themes: ['one-light', 'one-dark-pro'],
+        });
+
+        const uri = monacoInstance.Uri.parse('inmemory://model/0');
+        let model = monacoInstance.editor.getModel(uri);
+
+        if (!model) {
+            monacoModel = monacoInstance.editor.createModel(decryptedContent, languageOverride === 'auto' ? 'plaintext' : languageOverride, uri);
+        } else {
+            monacoModel = model;
+        }
+
+        codeEditor = monacoInstance.editor.create(document.getElementById('monaco-editor')!, {
+            readOnly: true,
+            padding: { top: 16 },
+            model: monacoModel,
+        });
+
+        updateMonacoTheme();
+
+        const observer = new MutationObserver(updateMonacoTheme);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+
+        initialized = true;
+    }
+
+    $: if (initialized && languageOverride) {
+        updateMonacoLanguage();
+    }
+
+    function updateMonacoTheme() {
+        const isDark = document.documentElement.classList.contains('dark');
+        monacoInstance.editor.setTheme(isDark ? 'one-dark-pro' : 'one-light');
+    }
+
+    function updateMonacoLanguage() {
+        const lang = getLanguage();
+
+        monacoInstance.editor.setModelLanguage(monacoModel, lang);
+    }
+
+    function getLanguage() {
+        if (languageOverride !== 'auto') return languageOverride;
+
+        const result = hljs.highlightAuto(decryptedContent, highlightLanguages);
+
+        return result.language || 'plaintext';
+    }
 
     const getHashParams = () => {
         if (typeof window === 'undefined') return new URLSearchParams();
         return new URLSearchParams(window.location.hash.replace('#', ''));
-    };
-
-    const updateHashParams = (updater: (params: URLSearchParams) => void) => {
-        if (typeof window === 'undefined') return;
-        const params = getHashParams();
-        updater(params);
-        const hash = params.toString();
-        const nextUrl = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ''}`;
-        window.history.replaceState(window.history.state, '', nextUrl);
-    };
-
-    const parseLineSelectionParam = (value: string | null): { start: number; end: number } | null => {
-        if (!value) return null;
-        const match = value.trim().match(/^(\d+)(?:-(\d+))?$/);
-        if (!match) return null;
-        const first = Number(match[1]);
-        const second = Number(match[2] ?? match[1]);
-        if (!Number.isInteger(first) || !Number.isInteger(second) || first < 1 || second < 1) return null;
-        return {
-            start: Math.min(first, second),
-            end: Math.max(first, second),
-        };
-    };
-
-    const syncLineSelectionFromHash = () => {
-        const selection = parseLineSelectionParam(getHashParams().get('line'));
-        if (!selection) {
-            lineSelectionStart = null;
-            lineSelectionEnd = null;
-            return;
-        }
-        lineSelectionStart = selection.start;
-        lineSelectionEnd = selection.end;
-    };
-
-    const persistLineSelectionToHash = () => {
-        updateHashParams((params) => {
-            if (lineSelectionStart === null || lineSelectionEnd === null) {
-                params.delete('line');
-                return;
-            }
-
-            const start = Math.min(lineSelectionStart, lineSelectionEnd);
-            const end = Math.max(lineSelectionStart, lineSelectionEnd);
-            params.set('line', start === end ? `${start}` : `${start}-${end}`);
-        });
-    };
-
-    const applyLineSelectionStyles = () => {
-        if (!pasteHighlightContainer) return;
-        const rows = Array.from(pasteHighlightContainer.querySelectorAll('tbody tr')) as HTMLTableRowElement[];
-
-        for (const row of rows) {
-            const lineNumber = Number(row.dataset.lineNumber ?? '');
-            const isInRange =
-                Number.isInteger(lineNumber) &&
-                lineSelectionStart !== null &&
-                lineSelectionEnd !== null &&
-                lineNumber >= Math.min(lineSelectionStart, lineSelectionEnd) &&
-                lineNumber <= Math.max(lineSelectionStart, lineSelectionEnd);
-
-            row.classList.toggle('is-line-selected', Boolean(isInRange));
-        }
-    };
-
-    const decorateRenderedLineNumbers = () => {
-        if (!pasteHighlightContainer) return;
-        const rows = Array.from(pasteHighlightContainer.querySelectorAll('tbody tr')) as HTMLTableRowElement[];
-
-        rows.forEach((row, index) => {
-            const lineNumber = index + 1;
-            row.dataset.lineNumber = `${lineNumber}`;
-
-            const lineCell = row.querySelector('td:first-child') as HTMLTableCellElement | null;
-            if (!lineCell) return;
-
-            lineCell.dataset.lineNumber = `${lineNumber}`;
-            lineCell.classList.add('paste-line-number-cell');
-            lineCell.setAttribute('title', 'Click to copy-link this line. Shift+click to select a range.');
-            lineCell.setAttribute('role', 'button');
-            lineCell.setAttribute('aria-label', `Select line ${lineNumber}`);
-        });
-
-        applyLineSelectionStyles();
-    };
-
-    const selectLine = (lineNumber: number, extendRange: boolean) => {
-        if (!Number.isInteger(lineNumber) || lineNumber < 1) return;
-
-        if (!extendRange || lineSelectionStart === null) {
-            lineSelectionStart = lineNumber;
-            lineSelectionEnd = lineNumber;
-        } else {
-            lineSelectionEnd = lineNumber;
-        }
-
-        persistLineSelectionToHash();
-        applyLineSelectionStyles();
     };
 
     const getKeyFromHash = () => {
@@ -253,56 +219,6 @@
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     };
 
-    const handleLineNumberClick = (event: MouseEvent) => {
-        if (!pasteHighlightContainer) return;
-        const target = event.target as HTMLElement | null;
-        if (!target) return;
-
-        const lineCell = target.closest('td.paste-line-number-cell') as HTMLTableCellElement | null;
-        if (!lineCell || !pasteHighlightContainer.contains(lineCell)) return;
-
-        const lineNumber = Number(lineCell.dataset.lineNumber ?? '');
-        if (!Number.isInteger(lineNumber) || lineNumber < 1) return;
-
-        event.preventDefault();
-        selectLine(lineNumber, event.shiftKey);
-    };
-
-    onMount(() => {
-        syncLineSelectionFromHash();
-        tryAutoDecrypt();
-
-        const handleHashChange = () => {
-            syncLineSelectionFromHash();
-            applyLineSelectionStyles();
-        };
-
-        window.addEventListener('hashchange', handleHashChange);
-
-        if (pasteHighlightContainer) {
-            lineSelectionObserver = new MutationObserver(() => {
-                decorateRenderedLineNumbers();
-            });
-
-            lineSelectionObserver.observe(pasteHighlightContainer, {
-                childList: true,
-                subtree: true,
-            });
-
-            pasteHighlightContainer.addEventListener('click', handleLineNumberClick);
-            decorateRenderedLineNumbers();
-        }
-
-        return () => {
-            window.removeEventListener('hashchange', handleHashChange);
-            if (pasteHighlightContainer) {
-                pasteHighlightContainer.removeEventListener('click', handleLineNumberClick);
-            }
-            lineSelectionObserver?.disconnect();
-            lineSelectionObserver = null;
-        };
-    });
-
     $: if (paste) {
         tryAutoDecrypt();
     }
@@ -310,15 +226,9 @@
     $: if (paste && !languageOverrideTouched) {
         languageOverride = paste.language ?? 'auto';
     }
-
-    $: languageNames = resolveLanguageNames(languageOverride);
-
-    $: if (pasteHighlightContainer) {
-        applyLineSelectionStyles();
-    }
 </script>
 
-<AppLayout mainClass="w-full max-w-none p-0 flex flex-col min-h-0">
+<AppLayout mainClass="w-full max-w-none p-0 flex flex-col">
     {#if decryptError}
         <section class="flex min-h-[70vh] items-center justify-center px-4 py-12">
             <div class="max-w-md text-center">
@@ -357,7 +267,7 @@
             </div>
         </section>
     {:else}
-        <section class="flex flex-1 min-h-0 w-full flex-col">
+        <section class="flex flex-1 min-h-0 w-full flex-col h-full">
             <div
                 class="flex items-center justify-between border-b border-zinc-200 bg-white/90 px-4 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/80 dark:text-zinc-300"
             >
@@ -372,7 +282,7 @@
                             class="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
                         >
                             <option value="auto">Auto detect</option>
-                            {#each highlightLanguages as option (option.value)}
+                            {#each allLanguages as option (option.value)}
                                 <option value={option.value}>{option.name}</option>
                             {/each}
                         </select>
@@ -400,64 +310,7 @@
                     </button>
                 </div>
             </div>
-            <div
-                bind:this={pasteHighlightContainer}
-                class="paste-highlight flex-1 min-h-0 w-full overflow-auto bg-white text-sm text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
-            >
-                <HighlightAuto code={decryptedContent ?? ''} {languageNames} langtag={Boolean(languageNames?.length)} let:highlighted>
-                    <LineNumbers {highlighted} hideBorder />
-                </HighlightAuto>
-            </div>
+            <monaco-editor id="monaco-editor" class="flex-1 min-h-0 w-full"></monaco-editor>
         </section>
     {/if}
 </AppLayout>
-
-<style>
-    .paste-highlight :global(pre) {
-        margin: 0;
-        min-height: 100%;
-    }
-
-    .paste-highlight :global(code) {
-        display: block;
-        min-height: 100%;
-    }
-
-    .paste-highlight :global(td) {
-        width: auto !important;
-    }
-
-    .paste-highlight :global(> div) {
-        flex: 1 1 auto;
-        min-height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .paste-highlight :global(table) {
-        width: 100%;
-        min-height: 100%;
-        height: 100%;
-        flex: 1 1 auto;
-        align-self: stretch;
-    }
-
-    .paste-highlight :global(tbody.hljs) {
-        height: calc(100vh - 111px);
-    }
-
-    .paste-highlight :global(td.paste-line-number-cell) {
-        cursor: pointer;
-        user-select: none;
-    }
-
-    .paste-highlight :global(tr.is-line-selected td) {
-        background-color: color-mix(in srgb, currentColor 18%, transparent);
-    }
-
-    .paste-highlight :global(tr.is-line-selected td.paste-line-number-cell) {
-        font-weight: 700;
-        background-color: color-mix(in srgb, currentColor 28%, transparent);
-        box-shadow: inset 3px 0 0 currentColor;
-    }
-</style>
