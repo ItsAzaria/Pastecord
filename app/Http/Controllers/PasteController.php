@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Paste;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -144,7 +144,7 @@ class PasteController extends Controller
     {
         $user = $request->user();
 
-        if (!$user?->discord_id) {
+        if (! $user?->discord_id) {
             abort(403, 'Discord account not linked.');
         }
 
@@ -180,11 +180,11 @@ class PasteController extends Controller
         }
 
         $content = $request->input('content');
-        if (!is_string($content) || trim($content) === '') {
+        if (! is_string($content) || trim($content) === '') {
             $content = $request->getContent();
         }
 
-        if (!is_string($content) || trim($content) === '') {
+        if (! is_string($content) || trim($content) === '') {
             return response()->json([
                 'message' => 'Content is required.',
                 'errors' => ['content' => ['Content is required.']],
@@ -229,7 +229,7 @@ class PasteController extends Controller
     {
         $paste = Paste::where('key', $key)->first();
 
-        if (!$paste) {
+        if (! $paste) {
             return response()->json([
                 'message' => 'Not found.',
             ], 404);
@@ -237,6 +237,7 @@ class PasteController extends Controller
 
         if ($paste->expires_at && $paste->expires_at->isPast()) {
             $paste->delete();
+
             return response()->json([
                 'message' => 'Not found.',
             ], 404);
