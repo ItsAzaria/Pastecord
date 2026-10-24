@@ -79,8 +79,7 @@
     };
 
     $: if (initialized && language) {
-        content;
-        updateMonacoLanguage();
+        updateMonacoLanguage(content);
     }
 
     function updateMonacoTheme() {
@@ -88,13 +87,13 @@
         monacoInstance.editor.setTheme(isDark ? 'one-dark-pro' : 'one-light');
     }
 
-    function updateMonacoLanguage() {
-        const lang = getLanguage();
+    function updateMonacoLanguage(text: string) {
+        const lang = getLanguage(text);
 
         monacoInstance.editor.setModelLanguage(monacoModel, lang);
     }
 
-    function getLanguage() {
+    function getLanguage(content: string) {
         if (language !== 'auto') return language;
 
         const result = hljs.highlightAuto(content, highlightLanguages);

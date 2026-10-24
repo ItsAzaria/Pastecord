@@ -37,7 +37,6 @@
 
     let monacoInstance: Awaited<ReturnType<typeof init>>;
     let monacoModel: editor.ITextModel;
-    let codeEditor: editor.IStandaloneCodeEditor;
 
     let initialized = false;
 
@@ -50,6 +49,7 @@
     });
 
     $: if (!initialized && decryptedContent) {
+        // eslint-disable-next-line svelte/infinite-reactive-loop -- guarded by `initialized`
         initMonaco();
     }
 
@@ -67,7 +67,7 @@
             monacoModel = model;
         }
 
-        codeEditor = monacoInstance.editor.create(document.getElementById('monaco-editor')!, {
+        monacoInstance.editor.create(document.getElementById('monaco-editor')!, {
             readOnly: true,
             padding: { top: 16 },
             model: monacoModel,
@@ -81,6 +81,7 @@
             attributeFilter: ['class'],
         });
 
+        // eslint-disable-next-line svelte/infinite-reactive-loop -- runs once, guarded by `initialized`
         initialized = true;
     }
 
