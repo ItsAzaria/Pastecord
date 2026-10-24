@@ -35,6 +35,12 @@ return [
         ],
     ],
 
+    'shlink' => [
+        'enabled' => env('SHLINK_ENABLED', false),
+        'url' => env('SHLINK_URL'),
+        'api_key' => env('SHLINK_API_KEY'),
+    ],
+
     'discord' => [
         'client_id' => env('DISCORD_CLIENT_ID'),
         'client_secret' => env('DISCORD_CLIENT_SECRET'),

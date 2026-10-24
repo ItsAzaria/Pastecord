@@ -1,6 +1,7 @@
 type HighlightLanguage = { name: string; value: string };
 
 export const allLanguages: HighlightLanguage[] = [
+    { name: 'Plaintext', value: 'plaintext' },
     { name: 'Python', value: 'python' },
     { name: 'C', value: 'c' },
     { name: 'C++', value: 'cpp' },
@@ -50,4 +51,4 @@ export const allLanguages: HighlightLanguage[] = [
     { name: 'CSP', value: 'csp' },
 ];
 
-export const highlightLanguages = allLanguages.map((lang) => lang.value);
+export const highlightLanguages = allLanguages.filter((lang) => lang.value !== 'plaintext').map((lang) => lang.value);

@@ -17,6 +17,9 @@ Route::get('/', function () {
 Route::post('pastes', [PasteController::class, 'store'])
     ->middleware(['throttle:10,1'])
     ->name('pastes.store');
+Route::post('shorten', [PasteController::class, 'shorten'])
+    ->middleware(['throttle:10,1'])
+    ->name('pastes.shorten');
 Route::delete('pastes/{key}', [PasteController::class, 'destroy'])->middleware(['auth'])->name('pastes.destroy');
 Route::get('{key}', [PasteController::class, 'show'])
     ->where('key', '[A-Za-z0-9]{32}')

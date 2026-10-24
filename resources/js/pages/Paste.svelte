@@ -22,6 +22,11 @@
 
     $: paste = ($page.props.paste ?? null) as PastePayload | null;
 
+    $: shlinkEnabled = Boolean($page.props.shlink_enabled);
+
+    let isShortening = false;
+    let shortUrl = '';
+    let shortenError = '';
     let decryptedContent = '';
     let decryptError = '';
     let isDecrypting = false;
@@ -211,6 +216,42 @@
         }
     };
 
+    const handleShorten = async () => {
+        if (isShortening || typeof window === 'undefined') return;
+        isShortening = true;
+        shortenError = '';
+        shortUrl = '';
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const response = await fetch('/shorten', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                },
+                body: JSON.stringify({ url: window.location.href }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok || !data.short_url) {
+                throw new Error(data.message ?? 'Unable to shorten URL.');
+            }
+
+            shortUrl = data.short_url;
+            try {
+                await navigator.clipboard?.writeText(shortUrl);
+            } catch {
+                // Clipboard access is optional; the URL is still shown.
+            }
+        } catch (error) {
+            shortenError = error instanceof Error ? error.message : 'Unable to shorten URL.';
+        } finally {
+            isShortening = false;
+        }
+    };
+
     const handleViewRaw = () => {
         if (!decryptedContent || typeof window === 'undefined') return;
         const blob = new Blob([decryptedContent], { type: 'text/plain;charset=utf-8' });
@@ -292,6 +333,27 @@
                     {/if}
                 </div>
                 <div class="flex items-center gap-2">
+                    {#if shortUrl}
+                        <input
+                            readonly
+                            value={shortUrl}
+                            on:focus={(e) => e.currentTarget.select()}
+                            aria-label="Shortened URL"
+                            class="w-48 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                        />
+                    {:else if shortenError}
+                        <span class="text-xs text-red-600">{shortenError}</span>
+                    {/if}
+                    {#if shlinkEnabled}
+                        <button
+                            type="button"
+                            on:click={handleShorten}
+                            class="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white"
+                            disabled={isShortening}
+                        >
+                            {isShortening ? 'Shortening...' : 'Shorten URL'}
+                        </button>
+                    {/if}
                     <button
                         type="button"
                         on:click={handleCopy}

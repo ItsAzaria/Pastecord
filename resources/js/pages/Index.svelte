@@ -78,7 +78,8 @@
         }
     };
 
-    $: if (initialized && language && content) {
+    $: if (initialized && language) {
+        content;
         updateMonacoLanguage();
     }
 
@@ -154,6 +155,10 @@
         if (!raw) return;
         try {
             const draft = JSON.parse(raw) as Partial<DraftPayload>;
+            if (draft.isEncrypted) {
+                clearDraft();
+                return;
+            }
             content = typeof draft.content === 'string' ? draft.content : content;
             language = typeof draft.language === 'string' ? draft.language : language;
             isEncrypted = typeof draft.isEncrypted === 'boolean' ? draft.isEncrypted : isEncrypted;
@@ -184,6 +189,10 @@
         if (typeof window === 'undefined') return;
         if (draftSaveTimeout) {
             clearTimeout(draftSaveTimeout);
+        }
+        if (draft.isEncrypted) {
+            clearDraft();
+            return;
         }
         draftSaveTimeout = setTimeout(() => saveDraft(draft), 300);
     };

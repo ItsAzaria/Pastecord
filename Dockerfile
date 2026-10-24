@@ -1,5 +1,5 @@
 # ---- Stage 1: Build Laravel + Vite ----
-FROM php:8.4-fpm AS builder
+FROM php:8.5.12-fpm AS builder
 
 # Install system dependencies + PHP extensions
 RUN apt-get update && apt-get install -y \
@@ -27,7 +27,7 @@ RUN npm ci
 RUN npm run build
 
 # ---- Stage 2: Production image ----
-FROM php:8.4-fpm
+FROM php:8.5.12-fpm
 
 # Install PHP extensions only
 RUN apt-get update && apt-get install -y libpq-dev postgresql-client \

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Paste;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -39,7 +40,54 @@ class PasteController extends Controller
                 'burn_after_read' => $paste->burn_after_read,
                 'expires_at' => $paste->expires_at?->toIso8601String(),
             ],
+            'shlink_enabled' => $this->shlinkEnabled(),
         ])->toResponse($request)->header('Cache-Control', 'no-store, max-age=0');
+    }
+
+    private function shlinkEnabled(): bool
+    {
+        return filter_var(config('services.shlink.enabled'), FILTER_VALIDATE_BOOLEAN)
+            && config('services.shlink.url')
+            && config('services.shlink.api_key');
+    }
+
+    public function shorten(Request $request)
+    {
+        if (! $this->shlinkEnabled()) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'url' => ['required', 'url', 'max:4096'],
+        ]);
+
+        // Only allow shortening links to this site so the Shlink instance can't be used as an open shortener.
+        $origin = $request->getSchemeAndHttpHost();
+        if (! Str::startsWith($validated['url'], $origin.'/')) {
+            return response()->json(['message' => 'Only links to this site can be shortened.'], 422);
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders(['X-Api-Key' => config('services.shlink.api_key')])
+                ->acceptJson()
+                ->post(rtrim(config('services.shlink.url'), '/').'/rest/v3/short-urls', [
+                    'longUrl' => $validated['url'],
+                    'findIfExists' => true,
+                ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'Unable to reach the URL shortener.'], 502);
+        }
+
+        $shortUrl = $response->json('shortUrl');
+
+        if (! $response->successful() || ! is_string($shortUrl)) {
+            return response()->json(['message' => 'Unable to shorten URL.'], 502);
+        }
+
+        return response()->json(['short_url' => $shortUrl]);
     }
 
     public function store(Request $request)
