@@ -4,7 +4,7 @@ FROM php:8.5.12-fpm AS builder
 # Install system dependencies + PHP extensions
 RUN apt-get update && apt-get install -y \
     git zip unzip curl libpq-dev nodejs npm postgresql-client \
-    && docker-php-ext-install pdo pdo_pgsql opcache
+    && docker-php-ext-install pdo pdo_pgsql
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -31,7 +31,7 @@ FROM php:8.5.12-fpm
 
 # Install PHP extensions only
 RUN apt-get update && apt-get install -y libpq-dev postgresql-client \
-    && docker-php-ext-install pdo pdo_pgsql opcache
+    && docker-php-ext-install pdo pdo_pgsql
 
 WORKDIR /var/www
 
